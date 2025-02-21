@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
-from processing.embeddings import generate_embeddings
+from processing.embeddings import generate_embeddings, query_embeddings
 
 from utils.constants import ALLOWED_FILE_TYPES
 
@@ -17,7 +17,19 @@ async def upload_file(file: UploadFile):
 
     # upload file to s3
     # add task to celery queue
-    await generate_embeddings(file)
+    file_id = await generate_embeddings(file)
 
-    return JSONResponse({"message": "File stored and processing started"})
+    return JSONResponse(
+        {"message": "File stored and processing started", "file_id": file_id}
+    )
 
+
+@router.get("/query")
+async def query_file(file_id: str, query: str):
+    """
+    Query File Endpoint
+    """
+    response = await query_embeddings(file_id, query)
+    # add task to celery queue
+    # query embeddings
+    return JSONResponse({"message": "Query processed", "data": response})

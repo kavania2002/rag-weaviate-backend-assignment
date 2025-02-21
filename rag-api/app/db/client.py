@@ -7,6 +7,7 @@ import weaviate
 from weaviate import WeaviateAsyncClient
 from weaviate.classes.init import Auth
 from weaviate.classes.config import Configure, Property, DataType
+from weaviate.classes.query import Filter, MetadataQuery
 
 load_dotenv()
 
@@ -38,6 +39,7 @@ class WeaviateClient:
             vector_index_config=Configure.VectorIndex.hnsw(),
             vectorizer_config=Configure.Vectorizer.none(),
             properties=[
+                Property(name="file_id", data_type=DataType.TEXT),
                 Property(name="chunk_id", data_type=DataType.TEXT),
                 Property(name="chunk_content", data_type=DataType.TEXT),
                 Property(name="file_name", data_type=DataType.TEXT),
@@ -78,6 +80,7 @@ class WeaviateClient:
 
     @staticmethod
     async def add_file_embedding(
+        file_id: str,
         chunk_content: str,
         file_name: str,
         file_type: str,
@@ -96,6 +99,7 @@ class WeaviateClient:
 
         await file_embeddings_collection.data.insert(
             properties={
+                "file_id": file_id,
                 "chunk_id": uuid.uuid4().hex,
                 "chunk_content": chunk_content,
                 "file_name": file_name,
@@ -105,9 +109,9 @@ class WeaviateClient:
         )
 
     @staticmethod
-    async def get_file_embeddings():
+    async def query_file_embeddings(file_id: str, query_vector: List[float]):
         """
-        Get file embeddings from Weaviate
+        Query file embeddings from Weaviate
         """
         if not WeaviateClient.is_connected():
             print("Weaviate client not connected")
@@ -117,7 +121,26 @@ class WeaviateClient:
             "FileEmbeddings"
         )
 
-        return await file_embeddings_collection.length()
+        response = await file_embeddings_collection.query.near_vector(
+            near_vector=query_vector,
+            distance=0.7,
+            limit=5,
+            filters=Filter.by_property("file_id").equal(file_id),
+            return_metadata=MetadataQuery(distance=True, score=True),
+        )
+
+        results = []
+        for obj in response.objects:
+            results.append(
+                {
+                    "file_name": obj.properties["file_name"],
+                    "file_type": obj.properties["file_type"],
+                    "chunk_content": obj.properties["chunk_content"],
+                    "score": 1 - round(obj.metadata.distance, 4),
+                }
+            )
+
+        return results
 
     @staticmethod
     async def close():
