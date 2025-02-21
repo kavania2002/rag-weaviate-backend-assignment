@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from db.client import WeaviateClient
+from services.db import WeaviateClient
 from routes import router as api_router
 
 

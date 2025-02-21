@@ -1,27 +1,52 @@
-from fastapi import APIRouter, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
-from processing.embeddings import generate_embeddings, query_embeddings
+import uuid
 
-from utils.constants import ALLOWED_FILE_TYPES
+from fastapi import APIRouter, UploadFile, BackgroundTasks, status, HTTPException
+from fastapi.responses import JSONResponse
+from controllers.file import FileController
+from services.embeddings import query_embeddings
+
+from utils.constants import ALLOWED_FILE_TYPES, MAX_FILE_SIZE
 
 router = APIRouter()
 
 
 @router.post("/upload")
-async def upload_file(file: UploadFile):
+async def upload_file(background_tasks: BackgroundTasks, file: UploadFile):
     """
     Upload File Endpoint
     """
-    if file.filename.split(".")[-1] not in ALLOWED_FILE_TYPES:
-        return HTTPException(status_code=415, detail="Unsupported Media Type")
+    if not file:
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No file provided"
+        )
 
-    # upload file to s3
-    # add task to celery queue
-    file_id = await generate_embeddings(file)
+    # Can check mimetype here but for simplicity we will check the file extension
+    file_extension = file.filename.split(".")[-1]
+    if file_extension not in ALLOWED_FILE_TYPES:
+        return HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported Media Type",
+        )
 
-    return JSONResponse(
-        {"message": "File stored and processing started", "file_id": file_id}
+    if file.size > MAX_FILE_SIZE:
+        return HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File size too large",
+        )
+
+    file_content = await file.read()
+    if not file_content:
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No file content"
+        )
+    file_id = uuid.uuid4().hex
+
+    # need to sync read the file content
+    background_tasks.add_task(
+        FileController.upload_file, file_id, file_content, file.filename, file_extension
     )
+
+    return JSONResponse({"message": "File processing started", "file_id": file_id})
 
 
 @router.get("/query")

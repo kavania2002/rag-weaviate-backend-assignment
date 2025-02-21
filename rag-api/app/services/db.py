@@ -1,7 +1,5 @@
-import os
 from typing import List
 import uuid
-from dotenv import load_dotenv
 
 import weaviate
 from weaviate import WeaviateAsyncClient
@@ -9,7 +7,7 @@ from weaviate.classes.init import Auth
 from weaviate.classes.config import Configure, Property, DataType
 from weaviate.classes.query import Filter, MetadataQuery
 
-load_dotenv()
+from config.weaviate_config import weaviate_config
 
 
 class WeaviateClient:
@@ -56,12 +54,10 @@ class WeaviateClient:
             return
 
         print("Connecting to Weaviate...")
-        weaviate_url = os.getenv("WEAVIATE_URL")
-        weaviate_api_key = os.getenv("WEAVIATE_API_KEY")
 
         WeaviateClient._async_client = weaviate.use_async_with_weaviate_cloud(
-            cluster_url=weaviate_url,
-            auth_credentials=Auth.api_key(weaviate_api_key),
+            cluster_url=weaviate_config.WEAVIATE_URL,
+            auth_credentials=Auth.api_key(weaviate_config.WEAVIATE_API_KEY),
         )
         await WeaviateClient._async_client.connect()
 
