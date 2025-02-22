@@ -5,6 +5,7 @@ import weaviate
 from weaviate.client import WeaviateClient
 from weaviate.classes.init import Auth
 from weaviate.collections.classes.data import DataObject
+from weaviate.classes.query import Filter, MetadataQuery
 
 from config.weaviate_config import weaviate_config
 
@@ -121,6 +122,64 @@ class WeaviateServices:
 
         file_status_collection.data.insert(
             properties={"file_id": file_id, "status": status}, vector=None
+        )
+
+    @staticmethod
+    def query_file_embeddings(file_id: str, query_vector: List[float]):
+        """
+        Query file embeddings from Weaviate
+        """
+        if not WeaviateServices.is_connected():
+            print("Weaviate client not connected")
+            return None
+
+        file_embeddings_collection = WeaviateServices._client.collections.get(
+            "FileEmbeddings"
+        )
+
+        response = file_embeddings_collection.query.near_vector(
+            near_vector=query_vector,
+            distance=0.7,
+            limit=5,
+            filters=Filter.by_property("file_id").equal(file_id),
+            return_metadata=MetadataQuery(distance=True, score=True),
+        )
+
+        results = []
+        for obj in response.objects:
+            results.append(
+                {
+                    "file_name": obj.properties["file_name"],
+                    "file_type": obj.properties["file_type"],
+                    "chunk_content": obj.properties["chunk_content"],
+                    "score": 1 - round(obj.metadata.distance, 4),
+                }
+            )
+
+        return results
+
+    @staticmethod
+    def store_query_result(
+        query_id: str, file_id: str, query_content: str, result: str
+    ):
+        """
+        Store the query result in Weaviate
+        """
+        if not WeaviateServices.is_connected():
+            print("Weaviate client not connected")
+            return
+
+        query_result_collection = WeaviateServices._client.collections.get(
+            "QueryResults"
+        )
+
+        query_result_collection.data.insert(
+            properties={
+                "file_id": file_id,
+                "query_id": query_id,
+                "query_content": query_content,
+                "result": result,
+            }
         )
 
     @staticmethod

@@ -18,9 +18,10 @@ def generate_embeddings_from_file(file_key: str, file_name: str, file_type: str)
     try:
         WeaviateServices.connect()
         file_content = AWSS3.get_file_content(file_key)
-        RedisClient.set(file_key, FileStatus.GENERATING_EMBEDDINGS)
+        RedisClient.set(f"file_status:{file_key}", FileStatus.GENERATING_EMBEDDINGS)
         text_parts = chunk_text(file_content)
 
+        # TODO: Can concurrently generate embeddings for each chunk
         file_embeddings: List[DataObject] = []
         for doc in text_parts:
             file_embedding = DataObject(
@@ -34,11 +35,11 @@ def generate_embeddings_from_file(file_key: str, file_name: str, file_type: str)
             )
             file_embeddings.append(file_embedding)
         WeaviateServices.batch_write_file_embeddings(file_embeddings)
-        RedisClient.set(file_key, FileStatus.EMBEDDINGS_GENERATED)
-        WeaviateServices.add_file_status(file_key, FileStatus.SUCCESS)
+        RedisClient.set(f"file_status:{file_key}", FileStatus.EMBEDDINGS_GENERATED)
+        WeaviateServices.add_file_status(f"file_status:{file_key}", FileStatus.SUCCESS)
 
     except Exception as e:
-        RedisClient.set(file_key, FileStatus.ERROR_OCCURRED)
+        RedisClient.set(f"file_status:{file_key}", FileStatus.ERROR_OCCURRED)
         print(
             f"Unexpected failure while fetching {file_key} file and generating embeddings: {str(e)}"
         )

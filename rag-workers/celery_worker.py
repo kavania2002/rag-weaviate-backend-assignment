@@ -1,5 +1,6 @@
 from celery import Celery
 from celery.signals import worker_process_init, worker_process_shutdown
+from config.celery_config import CELERY_QUEUES
 from config.redis_config import redis_config
 from services.cache import RedisClient
 
@@ -7,7 +8,7 @@ celery_app = Celery(
     "rag_ingestion_worker",
     broker=redis_config.REDIS_URL,
     backend=redis_config.REDIS_URL,
-    include=["worker.ingestion_worker"],
+    include=["worker.ingestion_worker", "worker.retrieval_worker"],
 )
 
 celery_app.conf.update(
