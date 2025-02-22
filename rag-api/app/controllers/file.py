@@ -15,17 +15,18 @@ class FileController:
         """
         Upload file to S3
         """
-        # add task to celery queue
 
         try:
             file_key = f"{file_id}.{file_type}"
-            RedisClient.set(file_key, FileStatus.UPLOADING_TO_S3)
+            RedisClient.set(f"file_status:{file_key}", FileStatus.UPLOADING_TO_S3)
             AWSS3.upload_file(file_key, file_content)
-            RedisClient.set(file_key, FileStatus.SENT_TO_WORKER)
+            RedisClient.set(f"file_status:{file_key}", FileStatus.UPLOADED_TO_S3)
             CeleryService.send_task(
                 "worker.ingestion_worker.generate_embeddings_from_file",
-                [file_key, file_name, file_type],
+                queue="ingestion_worker",
+                args=[file_key, file_name, file_type],
             )
+            RedisClient.set(f"file_status:{file_key}", FileStatus.SENT_TO_WORKER)
         except RuntimeError as e:
             raise RuntimeError(f"Failed to upload {file_id} to S3") from e
 
@@ -37,8 +38,9 @@ class FileController:
         """
         Get file status
         """
-        if RedisClient.exists(file_id):
-            return RedisClient.get(file_id)
+        redis_key = f"file_status:{file_id}"
+        if RedisClient.exists(redis_key):
+            return RedisClient.get(redis_key)
 
-        response = await WeaviateClient.get_file_status(file_id)
+        response = await WeaviateClient.get_file_status(redis_key)
         return response

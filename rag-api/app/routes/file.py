@@ -3,7 +3,6 @@ import uuid
 from fastapi import APIRouter, UploadFile, BackgroundTasks, status, HTTPException
 from fastapi.responses import JSONResponse
 from controllers.file import FileController
-from services.embeddings import query_embeddings
 
 from utils.constants import ALLOWED_FILE_TYPES, MAX_FILE_SIZE
 
@@ -51,18 +50,7 @@ async def upload_file(background_tasks: BackgroundTasks, file: UploadFile):
     )
 
 
-@router.get("/query")
-async def query_file(file_id: str, query: str):
-    """
-    Query File Endpoint
-    """
-    response = await query_embeddings(file_id, query)
-    # add task to celery queue
-    # query embeddings
-    return JSONResponse({"message": "Query processed", "data": response})
-
-
-@router.get("/status")
+@router.get("/status/{file_id}")
 async def get_status(file_id: str):
     """
     Get File Status Endpoint

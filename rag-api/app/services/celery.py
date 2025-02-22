@@ -18,9 +18,9 @@ class CeleryService:
     )
 
     @staticmethod
-    def send_task(task_name: str, args: List[str]):
+    def send_task(task_name: str, queue: str, args: List[str]):
         """
         Send task to celery
         """
-        CeleryService._celery_client.send_task(task_name, args)
+        CeleryService._celery_client.send_task(task_name, queue=queue, args=args)
         print(f"Task sent: {task_name}")

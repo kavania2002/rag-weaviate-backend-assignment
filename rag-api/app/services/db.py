@@ -58,6 +58,22 @@ class WeaviateClient:
                 ],
             )
 
+        if await WeaviateClient._async_client.collections.exists("QueryResults"):
+            print("QueryResults collection already exists")
+        else:
+            await WeaviateClient._async_client.collections.create(
+                name="QueryResults",
+                description="Collection to store query results",
+                vector_index_config=Configure.VectorIndex.hnsw(),
+                vectorizer_config=Configure.Vectorizer.none(),
+                properties=[
+                    Property(name="file_id", data_type=DataType.TEXT),
+                    Property(name="query_id", data_type=DataType.TEXT),
+                    Property(name="query_content", data_type=DataType.TEXT),
+                    Property(name="result", data_type=DataType.TEXT),
+                ],
+            )
+
     @staticmethod
     async def connect():
         """Initialize the async client if not already initialized"""
@@ -88,70 +104,6 @@ class WeaviateClient:
         return False
 
     @staticmethod
-    async def add_file_embedding(
-        file_id: str,
-        chunk_content: str,
-        file_name: str,
-        file_type: str,
-        file_embedding: List[float],
-    ):
-        """
-        Add file embeddings to Weaviate
-        """
-        if not WeaviateClient.is_connected():
-            print("Weaviate client not connected")
-            return
-
-        file_embeddings_collection = WeaviateClient._async_client.collections.get(
-            "FileEmbeddings"
-        )
-
-        await file_embeddings_collection.data.insert(
-            properties={
-                "file_id": file_id,
-                "chunk_id": uuid.uuid4().hex,
-                "chunk_content": chunk_content,
-                "file_name": file_name,
-                "file_type": file_type,
-            },
-            vector=file_embedding,
-        )
-
-    @staticmethod
-    async def query_file_embeddings(file_id: str, query_vector: List[float]):
-        """
-        Query file embeddings from Weaviate
-        """
-        if not WeaviateClient.is_connected():
-            print("Weaviate client not connected")
-            return
-
-        file_embeddings_collection = WeaviateClient._async_client.collections.get(
-            "FileEmbeddings"
-        )
-
-        response = await file_embeddings_collection.query.near_vector(
-            near_vector=query_vector,
-            distance=0.7,
-            limit=5,
-            filters=Filter.by_property("file_id").equal(file_id),
-            return_metadata=MetadataQuery(distance=True, score=True),
-        )
-
-        results = []
-        for obj in response.objects:
-            results.append(
-                {
-                    "file_name": obj.properties["file_name"],
-                    "file_type": obj.properties["file_type"],
-                    "chunk_content": obj.properties["chunk_content"],
-                    "score": 1 - round(obj.metadata.distance, 4),
-                }
-            )
-
-        return results
-
-    @staticmethod
     async def get_file_status(file_id: str):
         """
         Get the status of the file
@@ -170,6 +122,27 @@ class WeaviateClient:
 
         if response.objects:
             return response.objects[0].properties.get("status")
+        return None
+
+    @staticmethod
+    async def get_query_status(query_id: str):
+        """
+        Get the status of the query
+        """
+        if not WeaviateClient.is_connected():
+            print("Weaviate client not connected")
+            return
+
+        query_results_collection = WeaviateClient._async_client.collections.get(
+            "QueryResults"
+        )
+
+        response = await query_results_collection.query.fetch_objects(
+            filters=Filter.by_property("query_id").equal(query_id)
+        )
+
+        if response.objects:
+            return response.objects[0].properties.get("result")
         return None
 
     @staticmethod
