@@ -1,4 +1,4 @@
-from services.embeddings import generate_embeddings
+from services.celery import CeleryService
 from services.s3 import AWSS3
 
 
@@ -16,8 +16,10 @@ class FileController:
 
         try:
             AWSS3.upload_file(f"{file_id}.{file_type}", file_content)
-            # await generate_embeddings(file_id, file_content, file_name, file_type)
-            # print("Embeddings generated")
+            CeleryService.send_task(
+                "worker.ingestion_worker.generate_embeddings_from_file",
+                [f"{file_id}.{file_type}", file_name, file_type],
+            )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to upload {file_id} to S3") from e
 

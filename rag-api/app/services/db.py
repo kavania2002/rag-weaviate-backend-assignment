@@ -2,7 +2,7 @@ from typing import List
 import uuid
 
 import weaviate
-from weaviate import WeaviateAsyncClient
+from weaviate.client import WeaviateAsyncClient
 from weaviate.classes.init import Auth
 from weaviate.classes.config import Configure, Property, DataType
 from weaviate.classes.query import Filter, MetadataQuery
@@ -28,22 +28,35 @@ class WeaviateClient:
             return
 
         if await WeaviateClient._async_client.collections.exists("FileEmbeddings"):
-            print("Collection already exists")
-            return
+            print("FileEmbeddings collection already exists")
+        else:
+            await WeaviateClient._async_client.collections.create(
+                name="FileEmbeddings",
+                description="Collection to store file embeddings",
+                vector_index_config=Configure.VectorIndex.hnsw(),
+                vectorizer_config=Configure.Vectorizer.none(),
+                properties=[
+                    Property(name="file_id", data_type=DataType.TEXT),
+                    Property(name="chunk_id", data_type=DataType.TEXT),
+                    Property(name="chunk_content", data_type=DataType.TEXT),
+                    Property(name="file_name", data_type=DataType.TEXT),
+                    Property(name="file_type", data_type=DataType.TEXT),
+                ],
+            )
 
-        await WeaviateClient._async_client.collections.create(
-            name="FileEmbeddings",
-            description="Collection to store file embeddings",
-            vector_index_config=Configure.VectorIndex.hnsw(),
-            vectorizer_config=Configure.Vectorizer.none(),
-            properties=[
-                Property(name="file_id", data_type=DataType.TEXT),
-                Property(name="chunk_id", data_type=DataType.TEXT),
-                Property(name="chunk_content", data_type=DataType.TEXT),
-                Property(name="file_name", data_type=DataType.TEXT),
-                Property(name="file_type", data_type=DataType.TEXT),
-            ],
-        )
+        if await WeaviateClient._async_client.collections.exists("FileStatus"):
+            print("FileStatus collection already exists")
+        else:
+            await WeaviateClient._async_client.collections.create(
+                name="FileStatus",
+                description="Class to store file status",
+                vectorizer_config=Configure.Vectorizer.none(),
+                properties=[
+                    Property(name="file_id", data_type=DataType.TEXT),
+                    Property(name="status", data_type=DataType.TEXT),
+                    Property(name="message", data_type=DataType.TEXT),
+                ],
+            )
 
     @staticmethod
     async def connect():
