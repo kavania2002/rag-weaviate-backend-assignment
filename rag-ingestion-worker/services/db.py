@@ -86,21 +86,42 @@ class WeaviateServices:
             "FileEmbeddings"
         )
 
-        with file_embeddings_collection.batch.dynamic() as batch:
-            for file_embedding in file_embeddings:
-                batch.add_object(
-                    properties=file_embedding.properties, vector=file_embedding.vector
-                )
+        try:
+            with file_embeddings_collection.batch.dynamic() as batch:
+                for file_embedding in file_embeddings:
+                    batch.add_object(
+                        properties=file_embedding.properties,
+                        vector=file_embedding.vector,
+                    )
 
-                if batch.number_errors > 10:
-                    print("Batch write failed, rolling back")
-                    return
+                    if batch.number_errors > 10:
+                        print("Batch write failed, rolling back")
+                        return
 
-        failed_objects = file_embeddings_collection.batch.failed_objects
-        if failed_objects:
-            print(f"Failed to batch write {len(failed_objects)} objects")
-        else:
+            failed_objects = file_embeddings_collection.batch.failed_objects
+            if failed_objects:
+                print(f"Failed to batch write {len(failed_objects)} objects")
+                raise RuntimeError("Batch write failed")
+
             print("Batch write successful")
+        except Exception as e:
+            print(f"Batch write failed: {str(e)}")
+            raise RuntimeError("Batch write failed") from e
+
+    @staticmethod
+    def add_file_status(file_id: str, status: str):
+        """
+        Add file status to Weaviate
+        """
+        if not WeaviateServices.is_connected():
+            print("Weaviate client not connected")
+            return
+
+        file_status_collection = WeaviateServices._client.collections.get("FileStatus")
+
+        file_status_collection.data.insert(
+            properties={"file_id": file_id, "status": status}, vector=None
+        )
 
     @staticmethod
     def close():

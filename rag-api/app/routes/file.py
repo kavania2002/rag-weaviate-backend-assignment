@@ -46,7 +46,9 @@ async def upload_file(background_tasks: BackgroundTasks, file: UploadFile):
         FileController.upload_file, file_id, file_content, file.filename, file_extension
     )
 
-    return JSONResponse({"message": "File processing started", "file_id": file_id})
+    return JSONResponse(
+        {"message": "File processing started", "file_id": f"{file_id}.{file_extension}"}
+    )
 
 
 @router.get("/query")
@@ -58,3 +60,17 @@ async def query_file(file_id: str, query: str):
     # add task to celery queue
     # query embeddings
     return JSONResponse({"message": "Query processed", "data": response})
+
+
+@router.get("/status")
+async def get_status(file_id: str):
+    """
+    Get File Status Endpoint
+    """
+    response = await FileController.get_file_status(file_id)
+    return JSONResponse(
+        {
+            "message": "File status retrieved",
+            "data": response if response else "File not found",
+        }
+    )

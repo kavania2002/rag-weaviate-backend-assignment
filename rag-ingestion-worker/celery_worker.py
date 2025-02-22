@@ -1,5 +1,7 @@
 from celery import Celery
+from celery.signals import worker_process_init, worker_process_shutdown
 from config.redis_config import redis_config
+from services.cache import RedisClient
 
 celery_app = Celery(
     "rag_ingestion_worker",
@@ -15,6 +17,23 @@ celery_app.conf.update(
     timezone="UTC",
     broker_connection_retry_on_startup=True,
 )
+
+
+@worker_process_init.connect
+def init_worker(**_):
+    """
+    Initialize the worker"""
+    print("Initializing worker...")
+    RedisClient.connect()
+
+
+@worker_process_shutdown.connect
+def shutdown_worker(**_):
+    """
+    Shutdown the worker"""
+    print("Shutting down worker...")
+    RedisClient.close()
+
 
 if __name__ == "__main__":
     print("Starting worker...")

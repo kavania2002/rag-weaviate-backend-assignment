@@ -152,6 +152,27 @@ class WeaviateClient:
         return results
 
     @staticmethod
+    async def get_file_status(file_id: str):
+        """
+        Get the status of the file
+        """
+        if not WeaviateClient.is_connected():
+            print("Weaviate client not connected")
+            return
+
+        file_status_collection = WeaviateClient._async_client.collections.get(
+            "FileStatus"
+        )
+
+        response = await file_status_collection.query.fetch_objects(
+            filters=Filter.by_property("file_id").equal(file_id)
+        )
+
+        if response.objects:
+            return response.objects[0].properties.get("status")
+        return None
+
+    @staticmethod
     async def close():
         """Close the client connection"""
         if WeaviateClient._async_client:

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from services.db import WeaviateClient
-from services.redis import RedisClient
+from services.cache import RedisClient
 from routes import router as api_router
 
 
@@ -13,12 +13,12 @@ async def lifespan(app: FastAPI):
     """
 
     await WeaviateClient.connect()
-    await RedisClient.connect()
+    RedisClient.connect()
     try:
         yield
     finally:
         await WeaviateClient.close()
-        await RedisClient.close()
+        RedisClient.close()
 
 
 app = FastAPI(lifespan=lifespan, title="RAG Backend API")

@@ -2,6 +2,8 @@ from typing import List
 from weaviate.collections.classes.data import DataObject
 from celery_worker import celery_app
 
+from models.file_status import FileStatus
+from services.cache import RedisClient
 from services.db import WeaviateServices
 from services.s3 import AWSS3
 from worker.chunking import chunk_text
@@ -16,6 +18,7 @@ def generate_embeddings_from_file(file_key: str, file_name: str, file_type: str)
     try:
         WeaviateServices.connect()
         file_content = AWSS3.get_file_content(file_key)
+        RedisClient.set(file_key, FileStatus.GENERATING_EMBEDDINGS)
         text_parts = chunk_text(file_content)
 
         file_embeddings: List[DataObject] = []
@@ -31,8 +34,11 @@ def generate_embeddings_from_file(file_key: str, file_name: str, file_type: str)
             )
             file_embeddings.append(file_embedding)
         WeaviateServices.batch_write_file_embeddings(file_embeddings)
+        RedisClient.set(file_key, FileStatus.EMBEDDINGS_GENERATED)
+        WeaviateServices.add_file_status(file_key, FileStatus.SUCCESS)
 
     except Exception as e:
+        RedisClient.set(file_key, FileStatus.ERROR_OCCURRED)
         print(
             f"Unexpected failure while fetching {file_key} file and generating embeddings: {str(e)}"
         )
