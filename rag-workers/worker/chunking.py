@@ -4,11 +4,11 @@ import json
 import fitz
 from PIL import Image
 import pytesseract
+from docx import Document
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
     RecursiveJsonSplitter,
 )
-from unstructured.partition.docx import partition_docx
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=100)
 json_splitter = RecursiveJsonSplitter(max_chunk_size=512)
@@ -34,20 +34,16 @@ def extract_text_unstructured_from_pdf(pdf_bytes: bytes) -> str:
     return "\n".join(extracted_text)
 
 
-def extract_text_unstructured_from_docx(docx_bytes: bytes) -> str:
+def extract_text_python_docx(docx_bytes: bytes) -> str:
     """
-    Extracts text from a Docx using the Unstructured library.
+    Extracts text from a DOCX file using the python-docx library.
     """
-    elements = partition_docx(
-        file=io.BytesIO(docx_bytes),
-        strategy="fast",
-        infer_table_structure=True,
-        include_page_breaks=True,
-    )
-    if not elements or len(elements) == 0:
-        raise ValueError("No text found in the Docx file.")
+    doc = Document(io.BytesIO(docx_bytes))
+    raw_texts = [para.text for para in doc.paragraphs if para.text.strip()]
 
-    raw_texts = [element.text for element in elements]
+    if not raw_texts:
+        raise ValueError("No text found in the DOCX file.")
+
     return "\n".join(raw_texts)
 
 
@@ -87,6 +83,6 @@ def chunk_text(file_content: bytes, file_type: str):
         return splitter.create_documents([full_text])
 
     if file_type == "docx":
-        full_text = extract_text_unstructured_from_docx(file_content)
+        full_text = extract_text_python_docx(file_content)
         print(f"Full extracted text:\n{full_text[:500]}...")
         return splitter.create_documents([full_text])

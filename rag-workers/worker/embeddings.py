@@ -1,9 +1,10 @@
-from langchain_huggingface import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = SentenceTransformer("sentence-transformers/paraphrase-MiniLM-L3-v2")
+
 
 def generate_embedding(text: str):
     """
     Generates an embedding for a given text chunk.
     """
-    return embeddings.embed_query(text)
+    return embeddings.encode(text).tolist()
