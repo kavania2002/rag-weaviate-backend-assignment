@@ -1,9 +1,14 @@
 import io
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import json
+from langchain_text_splitters import (
+    RecursiveCharacterTextSplitter,
+    RecursiveJsonSplitter,
+)
 from unstructured.partition.pdf import partition_pdf
 from unstructured.partition.docx import partition_docx
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=100)
+json_splitter = RecursiveJsonSplitter(max_chunk_size=512)
 
 
 def extract_text_unstructured_from_pdf(pdf_bytes: bytes) -> str:
@@ -41,12 +46,35 @@ def extract_text_unstructured_from_docx(docx_bytes: bytes) -> str:
     return "\n".join(raw_texts)
 
 
+def extract_text_from_json(json_bytes: bytes):
+    """
+    Extracts text from JSON by flattening it.
+    """
+    try:
+        json_data = json.loads(json_bytes.decode())
+
+        if isinstance(json_data, dict):
+            json_data = [json_data]
+
+        if not isinstance(json_data, list):
+            raise ValueError("JSON must be an array of objects.")
+
+        return json_data
+
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON file: {e}") from e
+
+
 def chunk_text(file_content: bytes, file_type: str):
     """
     Splits the given file content into smaller chunks.
     """
     if file_type == "txt":
         return splitter.create_documents([file_content.decode()])
+
+    if file_type == "json":
+        json_data = extract_text_from_json(file_content)
+        return json_splitter.create_documents(json_data)
 
     if file_type == "pdf":
         full_text = extract_text_unstructured_from_pdf(file_content)
