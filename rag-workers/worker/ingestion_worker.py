@@ -19,7 +19,7 @@ def generate_embeddings_from_file(file_key: str, file_name: str, file_type: str)
         WeaviateServices.connect()
         file_content = AWSS3.get_file_content(file_key)
         RedisClient.set(f"file_status:{file_key}", FileStatus.GENERATING_EMBEDDINGS)
-        text_parts = chunk_text(file_content)
+        text_parts = chunk_text(file_content, file_type)
 
         # TODO: Can concurrently generate embeddings for each chunk
         file_embeddings: List[DataObject] = []

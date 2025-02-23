@@ -1,6 +1,5 @@
 from celery import Celery
 from celery.signals import worker_process_init, worker_process_shutdown
-from config.celery_config import CELERY_QUEUES
 from config.redis_config import redis_config
 from services.cache import RedisClient
 
