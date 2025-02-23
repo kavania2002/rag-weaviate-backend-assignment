@@ -16,7 +16,7 @@ class QueryController:
         """
 
         try:
-            RedisClient.set(f"query_result:{file_id}", QueryStatus.QUERYING)
+            RedisClient.set(f"query_result:{query_id}", QueryStatus.QUERYING)
             CeleryService.send_task(
                 "worker.retrieval_worker.query_embeddings",
                 queue="retrieval_worker",
