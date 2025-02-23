@@ -1,6 +1,7 @@
 boto3==1.36.25
 celery==5.4.0
 fastapi==0.115.8
+python-dotenv==1.0.1
 redis==5.2.1
 uvicorn==0.34.0
 weaviate-client==4.11.0

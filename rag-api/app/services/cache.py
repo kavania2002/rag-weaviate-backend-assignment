@@ -20,8 +20,6 @@ class RedisClient:
             port=redis_config.REDIS_PORT,
             password=redis_config.REDIS_PASSWORD,
             db=redis_config.REDIS_DB,
-            ssl=True,
-            socket_connect_timeout=5,
             decode_responses=True,
         )
         print("Current Redis Size", RedisClient._redis_client.dbsize())
