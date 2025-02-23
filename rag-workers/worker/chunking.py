@@ -1,10 +1,13 @@
 import io
 import json
+
+import fitz
+from PIL import Image
+import pytesseract
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
     RecursiveJsonSplitter,
 )
-from unstructured.partition.pdf import partition_pdf
 from unstructured.partition.docx import partition_docx
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=100)
@@ -16,17 +19,19 @@ def extract_text_unstructured_from_pdf(pdf_bytes: bytes) -> str:
     Extracts text from a PDF using the Unstructured library.
     """
     # TODO: for completion of task, had to use ocr (facing some issue in hi_res) and need to find some other way to extract text from pdf
-    elements = partition_pdf(
-        file=io.BytesIO(pdf_bytes),
-        strategy="ocr_only",
-        infer_table_structure=True,
-    )
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
-    if not elements or len(elements) == 0:
-        raise ValueError("No text found in the PDF file.")
+    extracted_text = []
 
-    raw_texts = [element.text for element in elements if element.text]
-    return "\n".join(raw_texts)
+    for page_num in range(doc.page_count):
+        page = doc.load_page(page_num)
+
+        pix = page.get_pixmap()
+        img = Image.open(io.BytesIO(pix.tobytes()))
+        ocr_text = pytesseract.image_to_string(img)
+        extracted_text.append(ocr_text)
+
+    return "\n".join(extracted_text)
 
 
 def extract_text_unstructured_from_docx(docx_bytes: bytes) -> str:

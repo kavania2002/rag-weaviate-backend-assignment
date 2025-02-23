@@ -22,6 +22,7 @@ class RedisClient:
             db=redis_config.REDIS_DB,
             decode_responses=True,
         )
+        print(RedisClient._redis_client.dbsize())
         print("Connected to Redis!")
 
     @staticmethod
