@@ -9,11 +9,13 @@ This document provides a high-level overview of the system architecture for the 
 1. **FastAPI Server**
    - Manages API requests for file uploads, query handling, and status checks.
    - Interfaces with Redis for task queuing and with Weaviate if cache missed.
+   - [README](./rag-api/README.md)
 2. **Celery Workers**
 
    - Process uploaded files asynchronously.
    - Generate embeddings and store them in Weaviate.
    - Handle long-running tasks such as query processing.
+   - [README](./rag-workers/README.md)
 
 3. **External Services**
    - **Redis**: Acts as a task queue for Celery workers and cache for status.
