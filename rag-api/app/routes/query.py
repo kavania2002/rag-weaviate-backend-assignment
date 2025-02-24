@@ -10,7 +10,7 @@ from utils.response import is_json_serialized
 router = APIRouter()
 
 
-@router.get("/{file_id}")
+@router.post("/{file_id}")
 async def query(file_id: str, search_query: str):
     """
     Query File Endpoint
